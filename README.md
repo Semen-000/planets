@@ -80,4 +80,5 @@ git push
 |------|--------|
 | Бузанов Семён Александрович |23ИСд|
 
+![Alt text](https://github.com/Semen-000/111/blob/main/67.png)
 
