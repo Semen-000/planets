@@ -134,5 +134,5 @@ git push
 
 ![Alt text](https://github.com/Semen-000/neuro-awake_Task006_-_-_23-/blob/main/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-02-25%20103215.png))
 
-![Alt text](
+![Alt text](https://github.com/Semen-000/neuro-awake_Task006_-_-_23-/blob/main/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-02-25%20103241.png))
 
