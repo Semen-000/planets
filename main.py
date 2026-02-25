@@ -3,6 +3,7 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 import csv
 import os
+import re
 from datetime import datetime
 
 class OperatorApp:
@@ -48,6 +49,28 @@ class OperatorApp:
         
         # Тонкая линия-разделитель
         tk.Frame(parent, bg='#bdc3c7', height=1).pack(fill=tk.X, pady=0)
+    
+    def validate_name_input(self, text):
+        """Валидация для имени (только буквы, пробелы и дефисы)"""
+        if text == "":
+            return True
+        # Разрешаем русские и английские буквы, пробелы и дефисы
+        return bool(re.match(r'^[а-яА-Яa-zA-Z\s-]*$', text))
+    
+    def validate_age_input(self, text):
+        """Валидация для возраста (только цифры, от 18 до 120)"""
+        if text == "":
+            return True
+        if not text.isdigit():
+            return False
+        value = int(text)
+        return 18 <= value <= 120
+    
+    def validate_id_input(self, text):
+        """Валидация для ID (только цифры)"""
+        if text == "":
+            return True
+        return text.isdigit()
     
     def show_start_window(self):
         """Окно №1 - Стартовая форма"""
@@ -144,6 +167,11 @@ class OperatorApp:
         ]
         
         self.reg_entries = {}
+        
+        # Регистрируем валидацию
+        vcmd_name = (self.root.register(self.validate_name_input), '%P')
+        vcmd_age = (self.root.register(self.validate_age_input), '%P')
+        
         for label_text, field_name in fields:
             row = tk.Frame(self.content1, bg='white')
             row.pack(fill=tk.X, pady=8)
@@ -151,9 +179,22 @@ class OperatorApp:
             tk.Label(row, text=label_text, width=10, anchor='w', bg='white', 
                     font=('Arial', 11)).pack(side=tk.LEFT)
             
-            entry = tk.Entry(row, width=22, font=('Arial', 11), bd=1, relief=tk.SUNKEN)
+            if field_name == 'age':
+                # Для возраста - только цифры от 18 до 120
+                entry = tk.Entry(row, width=22, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
+                               validate='key', validatecommand=vcmd_age)
+            else:
+                # Для имени/фамилии/отчества - только буквы
+                entry = tk.Entry(row, width=22, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
+                               validate='key', validatecommand=vcmd_name)
+            
             entry.pack(side=tk.LEFT, padx=5)
             self.reg_entries[field_name] = entry
+            
+            # Добавляем подсказку
+            if field_name == 'age':
+                tk.Label(row, text="(18-120)", font=('Arial', 8), fg='#7f8c8d', 
+                       bg='white').pack(side=tk.LEFT, padx=2)
         
         tk.Button(self.content1, text="Записать", command=self.save_operator,
                  bg='#005BBB', fg='white', font=('Arial', 11, 'bold'),
@@ -197,12 +238,37 @@ class OperatorApp:
         middle_name = self.reg_entries['middle_name'].get().strip()
         age = self.reg_entries['age'].get().strip()
         
-        if not last_name or not first_name or not age:
-            messagebox.showerror("Ошибка", "Заполните фамилию, имя и возраст!")
+        # Дополнительная проверка на пустые значения
+        if not last_name:
+            messagebox.showerror("Ошибка", "Заполните фамилию!")
+            return
+        
+        if not first_name:
+            messagebox.showerror("Ошибка", "Заполните имя!")
+            return
+        
+        if not age:
+            messagebox.showerror("Ошибка", "Заполните возраст!")
+            return
+        
+        # Проверка на допустимые символы для имени
+        if not re.match(r'^[а-яА-Яa-zA-Z\s-]+$', last_name):
+            messagebox.showerror("Ошибка", "Фамилия может содержать только буквы, пробелы и дефисы!")
+            return
+        
+        if not re.match(r'^[а-яА-Яa-zA-Z\s-]+$', first_name):
+            messagebox.showerror("Ошибка", "Имя может содержать только буквы, пробелы и дефисы!")
+            return
+        
+        if middle_name and not re.match(r'^[а-яА-Яa-zA-Z\s-]*$', middle_name):
+            messagebox.showerror("Ошибка", "Отчество может содержать только буквы, пробелы и дефисы!")
             return
         
         try:
             age = int(age)
+            if age < 18 or age > 120:
+                messagebox.showerror("Ошибка", "Возраст должен быть от 18 до 120 лет!")
+                return
         except ValueError:
             messagebox.showerror("Ошибка", "Возраст должен быть числом!")
             return
@@ -242,8 +308,10 @@ class OperatorApp:
         }
         
         messagebox.showinfo("Успех", f"Оператор зарегистрирован с ID: {next_id}")
-        # Убрали self.show_start_window() - теперь не перекидывает в начальное окно
-        # Оставляем пользователя в форме регистрации для загрузки фото
+        
+        # Очищаем поля ввода после успешной регистрации
+        for entry in self.reg_entries.values():
+            entry.delete(0, tk.END)
         
         # Обновляем ID в колонке идентификации
         for widget in self.content2.winfo_children():
@@ -427,8 +495,12 @@ class OperatorApp:
         tk.Label(auth_frame, text="введите ID", font=('Arial', 14), 
                 bg='white', fg='#34495e').pack(pady=(20, 5))
         
+        # Регистрируем валидацию для ID
+        vcmd_id = (self.root.register(self.validate_id_input), '%P')
+        
         self.auth_id_entry = tk.Entry(auth_frame, font=('Arial', 18), width=10, 
-                                     justify='center', bd=1, relief=tk.SUNKEN)
+                                     justify='center', bd=1, relief=tk.SUNKEN,
+                                     validate='key', validatecommand=vcmd_id)
         self.auth_id_entry.pack(pady=5)
         
         tk.Label(auth_frame, text="Например: 67", font=('Arial', 14, 'bold'), 
@@ -449,6 +521,11 @@ class OperatorApp:
         
         if not operator_id:
             messagebox.showerror("Ошибка", "Введите ID оператора")
+            return
+        
+        # ID должен быть числом (уже проверено валидацией, но на всякий случай)
+        if not operator_id.isdigit():
+            messagebox.showerror("Ошибка", "ID должен содержать только цифры")
             return
         
         if os.path.exists('operation_db.csv'):
