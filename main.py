@@ -5,6 +5,8 @@ import csv
 import os
 import re
 from datetime import datetime
+import hashlib
+import secrets
 
 class OperatorApp:
     def __init__(self, root):
@@ -25,16 +27,53 @@ class OperatorApp:
         # Показываем стартовое окно
         self.show_start_window()
     
+    def hash_password(self, password):
+        """Хэширование пароля с солью"""
+        # Генерируем соль
+        salt = secrets.token_hex(16)
+        # Хэшируем пароль с солью
+        password_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+        return f"{salt}${password_hash}"
+    
+    def verify_password(self, password, stored_hash):
+        """Проверка пароля"""
+        try:
+            salt, hash_value = stored_hash.split('$')
+            check_hash = hashlib.sha256((password + salt).encode()).hexdigest()
+            return check_hash == hash_value
+        except:
+            return False
+    
     def setup_files(self):
         """Создание необходимых папок и файлов"""
         if not os.path.exists('operations'):
             os.makedirs('operations')
         
-        if not os.path.exists('operation_db.csv'):
+        # Проверяем существование файла и его структуру
+        if os.path.exists('operation_db.csv'):
+            # Проверяем, есть ли колонка password_hash
+            with open('operation_db.csv', 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                header = next(reader, None)
+                
+            # Если нет колонки password_hash, пересоздаем файл
+            if header and 'password_hash' not in header:
+                # Создаем резервную копию
+                if os.path.exists('operation_db.csv'):
+                    os.rename('operation_db.csv', 'operation_db_backup.csv')
+                    print("Создана резервная копия: operation_db_backup.csv")
+                
+                # Создаем новый файл с правильной структурой
+                with open('operation_db.csv', 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.writer(f)
+                    writer.writerow(['id', 'last_name', 'first_name', 'middle_name', 'age', 
+                                   'birth_date', 'birth_time', 'software_start_time', 'days_duration', 'password_hash'])
+        else:
+            # Создаем новый файл
             with open('operation_db.csv', 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(['id', 'last_name', 'first_name', 'middle_name', 'age', 
-                               'birth_date', 'birth_time', 'software_start_time', 'days_duration'])
+                               'birth_date', 'birth_time', 'software_start_time', 'days_duration', 'password_hash'])
     
     def add_header(self, parent):
         """Добавляет заголовок и подзаголовок в окно на зеленом фоне"""
@@ -58,13 +97,11 @@ class OperatorApp:
         return bool(re.match(r'^[а-яА-Яa-zA-Z\s-]*$', text))
     
     def validate_age_input(self, text):
-        """Валидация для возраста (только цифры, от 18 до 120)"""
+        """Валидация для возраста (только цифры)"""
         if text == "":
             return True
-        if not text.isdigit():
-            return False
-        value = int(text)
-        return 18 <= value <= 120
+        # Разрешаем только цифры
+        return text.isdigit()
     
     def validate_id_input(self, text):
         """Валидация для ID (только цифры)"""
@@ -163,7 +200,9 @@ class OperatorApp:
             ('Фамилия:', 'last_name'),
             ('Имя:', 'first_name'),
             ('Отчество:', 'middle_name'),
-            ('Возраст:', 'age')
+            ('Возраст:', 'age'),
+            ('Пароль:', 'password'),
+            ('Подтверждение:', 'confirm_password')
         ]
         
         self.reg_entries = {}
@@ -174,24 +213,24 @@ class OperatorApp:
         
         for label_text, field_name in fields:
             row = tk.Frame(self.content1, bg='white')
-            row.pack(fill=tk.X, pady=8)
+            row.pack(fill=tk.X, pady=5)
             
-            tk.Label(row, text=label_text, width=10, anchor='w', bg='white', 
+            tk.Label(row, text=label_text, width=12, anchor='w', bg='white', 
                     font=('Arial', 11)).pack(side=tk.LEFT)
             
             if field_name == 'age':
-                # Для возраста - только цифры от 18 до 120
-                entry = tk.Entry(row, width=22, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
+                entry = tk.Entry(row, width=20, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
                                validate='key', validatecommand=vcmd_age)
+            elif field_name in ['password', 'confirm_password']:
+                entry = tk.Entry(row, width=20, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
+                               show='*')  # Скрываем ввод пароля
             else:
-                # Для имени/фамилии/отчества - только буквы
-                entry = tk.Entry(row, width=22, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
+                entry = tk.Entry(row, width=20, font=('Arial', 11), bd=1, relief=tk.SUNKEN,
                                validate='key', validatecommand=vcmd_name)
             
             entry.pack(side=tk.LEFT, padx=5)
             self.reg_entries[field_name] = entry
             
-            # Добавляем подсказку
             if field_name == 'age':
                 tk.Label(row, text="(18-120)", font=('Arial', 8), fg='#7f8c8d', 
                        bg='white').pack(side=tk.LEFT, padx=2)
@@ -237,8 +276,10 @@ class OperatorApp:
         first_name = self.reg_entries['first_name'].get().strip()
         middle_name = self.reg_entries['middle_name'].get().strip()
         age = self.reg_entries['age'].get().strip()
+        password = self.reg_entries['password'].get()
+        confirm_password = self.reg_entries['confirm_password'].get()
         
-        # Дополнительная проверка на пустые значения
+        # Проверка обязательных полей
         if not last_name:
             messagebox.showerror("Ошибка", "Заполните фамилию!")
             return
@@ -249,6 +290,28 @@ class OperatorApp:
         
         if not age:
             messagebox.showerror("Ошибка", "Заполните возраст!")
+            return
+        
+        # Проверка возраста
+        try:
+            age_int = int(age)
+            if age_int < 18 or age_int > 120:
+                messagebox.showerror("Ошибка", "Возраст должен быть от 18 до 120 лет!")
+                return
+        except ValueError:
+            messagebox.showerror("Ошибка", "Возраст должен быть числом!")
+            return
+        
+        if not password:
+            messagebox.showerror("Ошибка", "Введите пароль!")
+            return
+        
+        if password != confirm_password:
+            messagebox.showerror("Ошибка", "Пароли не совпадают!")
+            return
+        
+        if len(password) < 6:
+            messagebox.showerror("Ошибка", "Пароль должен содержать не менее 6 символов!")
             return
         
         # Проверка на допустимые символы для имени
@@ -264,15 +327,6 @@ class OperatorApp:
             messagebox.showerror("Ошибка", "Отчество может содержать только буквы, пробелы и дефисы!")
             return
         
-        try:
-            age = int(age)
-            if age < 18 or age > 120:
-                messagebox.showerror("Ошибка", "Возраст должен быть от 18 до 120 лет!")
-                return
-        except ValueError:
-            messagebox.showerror("Ошибка", "Возраст должен быть числом!")
-            return
-        
         # Получаем следующий ID
         next_id = 1
         if os.path.exists('operation_db.csv'):
@@ -281,6 +335,9 @@ class OperatorApp:
                 rows = list(reader)
                 if len(rows) > 1:
                     next_id = int(rows[-1][0]) + 1
+        
+        # Хэшируем пароль
+        password_hash = self.hash_password(password)
         
         now = datetime.now()
         
@@ -291,11 +348,12 @@ class OperatorApp:
                 last_name,
                 first_name,
                 middle_name,
-                age,
+                age_int,  # Сохраняем число, а не строку
                 now.strftime('%d.%m.%Y'),
                 now.strftime('%H:%M:%S'),
                 now.strftime('%H:%M:%S'),
-                '00:00:00'
+                '00:00:00',
+                password_hash
             ])
         
         self.current_operator_id = next_id
@@ -304,7 +362,7 @@ class OperatorApp:
             'last_name': last_name,
             'first_name': first_name,
             'middle_name': middle_name,
-            'age': age
+            'age': age_int
         }
         
         messagebox.showinfo("Успех", f"Оператор зарегистрирован с ID: {next_id}")
@@ -441,10 +499,15 @@ class OperatorApp:
                     bg=color, fg='white', relief=tk.RAISED, 
                     width=18, height=2).grid(row=0, column=i, padx=1, pady=1)
         
+        # Получаем данные из полей ввода
+        last_name = self.reg_entries['last_name'].get().strip() if 'last_name' in self.reg_entries else "Иванов"
+        first_name = self.reg_entries['first_name'].get().strip() if 'first_name' in self.reg_entries else "Иван"
+        middle_name = self.reg_entries['middle_name'].get().strip() if 'middle_name' in self.reg_entries else "Иванович"
+        
         data = [
-            ("Фамилия", "Иванов", "Оператор не определен"),
-            ("Имя", "Иван", "ID не присвоен"),
-            ("Отчество", "Иванович", "Запуск программы невозможен")
+            ("Фамилия", last_name if last_name else "Иванов", "Оператор не определен"),
+            ("Имя", first_name if first_name else "Иван", "ID не присвоен"),
+            ("Отчество", middle_name if middle_name else "Иванович", "Запуск программы невозможен")
         ]
         
         for r, row in enumerate(data, 1):
@@ -492,7 +555,7 @@ class OperatorApp:
         tk.Label(auth_frame, text="Авторизация оператора", 
                 font=('Arial', 18, 'bold'), bg='white', fg='#2c3e50').pack(pady=10)
         
-        tk.Label(auth_frame, text="введите ID", font=('Arial', 14), 
+        tk.Label(auth_frame, text="ID оператора", font=('Arial', 14), 
                 bg='white', fg='#34495e').pack(pady=(20, 5))
         
         # Регистрируем валидацию для ID
@@ -503,12 +566,20 @@ class OperatorApp:
                                      validate='key', validatecommand=vcmd_id)
         self.auth_id_entry.pack(pady=5)
         
-        tk.Label(auth_frame, text="Например: 67", font=('Arial', 14, 'bold'), 
-                bg='white', fg="#000000").pack(pady=10)
+        tk.Label(auth_frame, text="Пароль", font=('Arial', 14), 
+                bg='white', fg='#34495e').pack(pady=(20, 5))
+        
+        self.auth_password_entry = tk.Entry(auth_frame, font=('Arial', 18), width=10, 
+                                           justify='center', bd=1, relief=tk.SUNKEN,
+                                           show='*')
+        self.auth_password_entry.pack(pady=5)
+        
+        tk.Label(auth_frame, text="Например: ID 67, пароль: ваш_пароль", 
+                font=('Arial', 10), bg='white', fg="#7f8c8d").pack(pady=20)
         
         tk.Button(auth_frame, text="АВТОРИЗАЦИЯ", command=self.check_auth,
                  font=('Arial', 14, 'bold'), bg='#00A36C', fg='white',
-                 width=15, height=1, bd=0, cursor='hand2', relief=tk.FLAT).pack(pady=20)
+                 width=15, height=1, bd=0, cursor='hand2', relief=tk.FLAT).pack(pady=10)
         
         # Кнопка назад
         tk.Button(self.root, text="← Назад", command=self.show_start_window,
@@ -518,35 +589,54 @@ class OperatorApp:
     def check_auth(self):
         """Проверка авторизации"""
         operator_id = self.auth_id_entry.get().strip()
+        password = self.auth_password_entry.get()
         
         if not operator_id:
             messagebox.showerror("Ошибка", "Введите ID оператора")
             return
         
-        # ID должен быть числом (уже проверено валидацией, но на всякий случай)
+        if not password:
+            messagebox.showerror("Ошибка", "Введите пароль")
+            return
+        
         if not operator_id.isdigit():
             messagebox.showerror("Ошибка", "ID должен содержать только цифры")
             return
         
         if os.path.exists('operation_db.csv'):
-            with open('operation_db.csv', 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    if row['id'] == operator_id:
-                        self.operator_data = {
-                            'id': row['id'],
-                            'last_name': row['last_name'],
-                            'first_name': row['first_name'],
-                            'middle_name': row['middle_name'],
-                            'age': row['age']
-                        }
-                        self.current_operator_id = int(operator_id)
-                        
-                        # ПОСЛЕ АВТОРИЗАЦИИ - показываем три колонки с данными
-                        self.show_authorized_view()
+            try:
+                with open('operation_db.csv', 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    
+                    # Проверяем, есть ли нужные колонки
+                    if 'password_hash' not in reader.fieldnames:
+                        messagebox.showerror("Ошибка", "Файл базы данных устарел. Пожалуйста, пересоздайте базу данных, зарегистрировав нового оператора.")
                         return
-            
-            messagebox.showerror("Ошибка", f"Оператор с ID {operator_id} не найден")
+                    
+                    for row in reader:
+                        if row['id'] == operator_id:
+                            # Проверяем пароль
+                            stored_hash = row['password_hash']
+                            if self.verify_password(password, stored_hash):
+                                self.operator_data = {
+                                    'id': row['id'],
+                                    'last_name': row['last_name'],
+                                    'first_name': row['first_name'],
+                                    'middle_name': row['middle_name'],
+                                    'age': row['age']
+                                }
+                                self.current_operator_id = int(operator_id)
+                                
+                                # ПОСЛЕ АВТОРИЗАЦИИ - показываем три колонки с данными
+                                self.show_authorized_view()
+                                return
+                            else:
+                                messagebox.showerror("Ошибка", "Неверный пароль!")
+                                return
+                    
+                    messagebox.showerror("Ошибка", f"Оператор с ID {operator_id} не найден")
+            except Exception as e:
+                messagebox.showerror("Ошибка", f"Ошибка при чтении базы данных: {str(e)}")
     
     def show_authorized_view(self):
         """Показывает три колонки после авторизации"""
@@ -572,13 +662,12 @@ class OperatorApp:
         content1.pack(fill=tk.BOTH, expand=True)
         
         # Данные оператора в первой колонке
-        info_text = f"Фамилия: {self.operator_data['last_name']}\n" \
-                   f"Имя: {self.operator_data['first_name']}\n" \
-                   f"Отчество: {self.operator_data['middle_name']}\n" \
-                   f"Возраст: {self.operator_data['age']}"
+        fio_display = f"{self.operator_data['last_name']} {self.operator_data['first_name']} {self.operator_data['middle_name']}"
+        tk.Label(content1, text=fio_display, 
+                font=('Arial', 14, 'bold'), bg='white', fg='#2c3e50').pack(anchor='w', pady=(0, 5))
         
-        tk.Label(content1, text=info_text, 
-                font=('Arial', 12), bg='white', fg='#2c3e50', justify='left').pack(anchor='w')
+        tk.Label(content1, text=f"{self.operator_data['age']} лет", 
+                font=('Arial', 12), bg='white', fg='#34495e').pack(anchor='w')
         
         # === КОЛОНКА 2: ИДЕНТИФИКАЦИЯ (ОРАНЖЕВАЯ) ===
         col2 = tk.Frame(main_frame, bg='white', bd=1, relief=tk.SOLID)
@@ -593,20 +682,14 @@ class OperatorApp:
         
         # ID
         tk.Label(content2, text=f"ID {self.operator_data['id']}", 
-                font=('Arial', 16, 'bold'), bg='white', fg='#FF6B00').pack(pady=10)
-        
-        # Кнопка загрузки фото
-        tk.Button(content2, text="Загрузить фото", command=self.upload_photo,
-                 bg='#005BBB', fg='white', font=('Arial', 10),
-                 width=15, bd=0, cursor='hand2', relief=tk.FLAT).pack(pady=5)
+                font=('Arial', 24, 'bold'), bg='white', fg='#2c3e50').pack(pady=10)
         
         # Рамка для фото
         photo_frame = tk.Frame(content2, bg='#ecf0f1', bd=1, relief=tk.SUNKEN,
-                              width=200, height=150)
+                              width=220, height=160)
         photo_frame.pack(pady=10)
         photo_frame.pack_propagate(False)
         
-        # Создаем photo_label для отображения фото
         self.photo_label = tk.Label(photo_frame, bg='#ecf0f1')
         self.photo_label.pack(expand=True, fill=tk.BOTH)
         
@@ -615,7 +698,7 @@ class OperatorApp:
         if os.path.exists(photo_path):
             try:
                 img = Image.open(photo_path)
-                img.thumbnail((180, 130))
+                img.thumbnail((200, 140))
                 photo = ImageTk.PhotoImage(img)
                 self.photo_label.config(image=photo)
                 self.photo_label.image = photo
@@ -625,6 +708,13 @@ class OperatorApp:
         else:
             tk.Label(photo_frame, text="Фото отсутствует", 
                     font=('Arial', 10), bg='#ecf0f1', fg='#7f8c8d').pack(expand=True)
+        
+        tk.Label(content2, text="Требование: 800 x 600 px", 
+                font=('Arial', 9), fg='#FF6B00', bg='white').pack(pady=5)
+        
+        tk.Button(content2, text="Загрузить фото", command=self.upload_photo,
+                 bg='#005BBB', fg='white', font=('Arial', 10),
+                 width=15, bd=0, cursor='hand2', relief=tk.FLAT).pack(pady=5)
         
         # === КОЛОНКА 3: ИНФОРМАЦИОННЫЙ БЛОК (ЗЕЛЕНАЯ) ===
         col3 = tk.Frame(main_frame, bg='white', bd=1, relief=tk.SOLID)
@@ -637,30 +727,42 @@ class OperatorApp:
         self.content3 = tk.Frame(col3, bg='white', padx=20, pady=20)
         self.content3.pack(fill=tk.BOTH, expand=True)
         
-        # Информация в третьей колонке
+        # Информация в третьей колонке - КАК НА КАРТИНКЕ
         now = datetime.now()
-        info_text3 = f"{self.operator_data['last_name']} {self.operator_data['first_name']} {self.operator_data['middle_name']}\n" \
-                    f"{self.operator_data['age']} лет\n\n" \
-                    f"Дата/время: {now.strftime('%d.%m.%Y')} / {now.strftime('%H:%M:%S')}\n" \
-                    f"Время запуска ПО: {now.strftime('%H:%M:%S')}\n" \
-                    f"Время в дороге: 00:00:00\n" \
-                    f"Оставшееся время: 09:00:00"
         
-        tk.Label(self.content3, text=info_text3, 
-                font=('Arial', 11), bg='white', fg='#2c3e50', justify='left').pack(anchor='w', pady=5)
+        # ФИО жирным
+        tk.Label(self.content3, text=fio_display, 
+                font=('Arial', 14, 'bold'), bg='white', fg='#2c3e50').pack(anchor='w', pady=(0, 0))
+        
+        # Возраст
+        tk.Label(self.content3, text=f"{self.operator_data['age']} лет", 
+                font=('Arial', 12), bg='white', fg='#34495e').pack(anchor='w', pady=(0, 10))
+        
+        # Разделитель
+        tk.Frame(self.content3, bg='#bdc3c7', height=1).pack(fill=tk.X, pady=5)
+        
+        # Дата и время
+        tk.Label(self.content3, text=f"Дата/время: {now.strftime('%d.%m.%Y')} / {now.strftime('%H:%M:%S')}", 
+                font=('Arial', 10), bg='white', fg='#2c3e50').pack(anchor='w', pady=2)
+        
+        tk.Label(self.content3, text=f"Время запуска ПО: {now.strftime('%H:%M:%S')}", 
+                font=('Arial', 10), bg='white', fg='#2c3e50').pack(anchor='w', pady=2)
+        
+        tk.Label(self.content3, text="Время в дороге: 00:00:00", 
+                font=('Arial', 10), bg='white', fg='#2c3e50').pack(anchor='w', pady=2)
+        
+        tk.Label(self.content3, text="Оставшееся время: 09:00:00", 
+                font=('Arial', 10), bg='white', fg='#2c3e50').pack(anchor='w', pady=2)
         
         # Разделитель
         tk.Frame(self.content3, bg='#bdc3c7', height=1).pack(fill=tk.X, pady=10)
         
-        # Статус
-        tk.Label(self.content3, text="Оператор определен", 
-                font=('Arial', 12, 'bold'), bg='white', fg='#00A36C').pack(anchor='w', pady=2)
-        
+        # ID и инструкция
         tk.Label(self.content3, text=f"ID {self.operator_data['id']}", 
-                font=('Arial', 12, 'bold'), bg='white', fg='#2c3e50').pack(anchor='w', pady=2)
+                font=('Arial', 14, 'bold'), bg='white', fg='#2c3e50').pack(anchor='w', pady=(0, 5))
         
         tk.Label(self.content3, text="Для запуска программы нажмите \"Далее\"", 
-                font=('Arial', 10), bg='white', fg='#34495e').pack(anchor='w', pady=(10, 15))
+                font=('Arial', 10), bg='white', fg='#34495e').pack(anchor='w', pady=(0, 15))
         
         # Кнопка Далее
         tk.Button(self.content3, text="Далее →", command=self.next_step,
