@@ -53,44 +53,38 @@
 ```bash
 git clone https://github.com/Semen-000/planets.git
 cd planets
+```
 Установите зависимости:
 
-bash
+```bash
 pip install Pillow
+```
 Добавьте изображения планет в корневую папку:
 
-photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png - Солнце
+```photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png``` - Солнце
 
-photo_5260428536751788520_x (1)-no-bg-preview (carve.photos).png - Меркурий
+```photo_5260428536751788520_x (1)-no-bg-preview (carve.photos).png``` - Меркурий
 
-photo_5260428536751788522_x (1)-no-bg-preview (carve.photos).png - Венера
+```photo_5260428536751788522_x (1)-no-bg-preview (carve.photos).png``` - Венера
 
-photo_5260428536751788523_y-no-bg-preview (carve.photos).png - Земля
+```photo_5260428536751788523_y-no-bg-preview (carve.photos).png``` - Земля
 
-photo_5260428536751788525_y (1)-no-bg-preview (carve.photos).png - Марс
+```photo_5260428536751788525_y (1)-no-bg-preview (carve.photos).png``` - Марс
 
-photo_5260428536751788526_y (2)-no-bg-preview (carve.photos).png - Юпитер
+```photo_5260428536751788526_y (2)-no-bg-preview (carve.photos).png``` - Юпитер
 
-photo_5260428536751788527_y (1)-no-bg-preview (carve.photos).png - Сатурн
+```photo_5260428536751788527_y (1)-no-bg-preview (carve.photos).png``` - Сатурн
 
-photo_5260428536751788528_x (1)-no-bg-preview (carve.photos).png - Уран
+```photo_5260428536751788528_x (1)-no-bg-preview (carve.photos).png``` - Уран
 
-photo_5260428536751788529_x (1)-no-bg-preview (carve.photos).png - Нептун
+```photo_5260428536751788529_x (1)-no-bg-preview (carve.photos).png``` - Нептун
 
 Запустите программу:
 
-bash
+```bash
 python planets.py
-📁 Структура проекта
-text
-planets/
-├── planets.py              # Главный файл программы
-├── images/                 # Папка для изображений (создается автоматически)
-├── saves/                  # Папка для сохранений
-├── screenshots/            # Папка для скриншотов
-├── backgrounds/            # Папка для фонов
-├── textures/               # Папка для текстур
-└── README.md               # Этот файл
+```
+
 🛠️ Требования
 Python 3.6+
 
