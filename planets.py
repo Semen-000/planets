@@ -90,8 +90,6 @@ class MegaSolarSystem:
         self.comets = self.generate_comets(20)
         self.constellations = self.generate_constellations()
         self.black_holes = self.generate_black_holes(3)
-        self.satellites = self.generate_satellites()  # Новое: искусственные спутники
-        self.space_stations = self.generate_space_stations()  # Новое: космические станции
         
         # ==================== ДАННЫЕ О ПЛАНЕТАХ ====================
         self.planets_data = [
@@ -547,10 +545,10 @@ class MegaSolarSystem:
             self.sun_image_original = None
             self.sun_images_cache = {}
     
-    def generate_satellites(self):
-        """Генерация искусственных спутников Земли"""
+    """def generate_satellites(self):
+        ""Генерация искусственных спутников Земли""
         satellites = []
-        for i in range(10):
+        for i in range(1):
             satellites.append({
                 "name": f"Sat-{i+1}",
                 "distance": 1.1,
@@ -560,10 +558,10 @@ class MegaSolarSystem:
                 "angle": random.uniform(0, 2*math.pi),
                 "parent": "Земля"
             })
-        return satellites
+        return satellites"""
     
-    def generate_space_stations(self):
-        """Генерация космических станций"""
+    """def generate_space_stations(self):
+        "Генерация космических станций"
         stations = [
             {
                 "name": "МКС",
@@ -584,7 +582,7 @@ class MegaSolarSystem:
                 "parent": "Земля"
             }
         ]
-        return stations
+        return stations"""
     
     def generate_stars(self, count):
         """Генерация улучшенного звездного поля"""
@@ -1440,15 +1438,15 @@ class MegaSolarSystem:
         stats_frame.pack(fill=tk.X, padx=15, pady=10)
         
         total_moons = self.total_moons()
-        total_objects = len(self.planets_data) + total_moons + len(self.asteroids) + len(self.stars) + len(self.satellites) + len(self.space_stations)
+        total_objects = len(self.planets_data) + total_moons + len(self.asteroids) + len(self.stars)
         
         stats = [
             f"Планет: {len(self.planets_data)}",
             f"Спутников: {total_moons}",
             f"Астероидов: {len(self.asteroids)}",
             f"Звезд: {len(self.stars)}",
-            f"Иск. спутников: {len(self.satellites)}",
-            f"Косм. станций: {len(self.space_stations)}",
+            #f"Иск. спутников: {len(self.satellites)}",
+            #f"Косм. станций: {len(self.space_stations)}",
             f"Всего объектов: {total_objects}",
             f"Возраст системы: 4.6 млрд лет",
             f"Галактика: Млечный Путь"
@@ -2149,7 +2147,7 @@ class MegaSolarSystem:
                                         fill=moon_color, outline='#A9A9A9')
         
         # Искусственные спутники для Земли
-        if planet["name"] == "Земля" and self.show_effects:
+        """if planet["name"] == "Земля" and self.show_effects:
             for sat in self.satellites:
                 if not self.paused:
                     sat["angle"] += self.BASE_SPEED * sat["speed"] * self.time_multiplier
@@ -2174,7 +2172,7 @@ class MegaSolarSystem:
                 
                 self.canvas.create_oval(station_x - station_r, station_y - station_r,
                                         station_x + station_r, station_y + station_r,
-                                        fill=station["color"], outline='white')
+                                        fill=station["color"], outline='white')"""
         
         # Большое Красное Пятно
         if planet["name"] == "Юпитер" and self.show_effects:
