@@ -45,7 +45,8 @@
 
 ## 📸 Скриншоты
 
-(здесь можно добавить скриншоты вашей программы)
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b8383db0-763f-4e6b-b5f2-f41bb00b9fbf" />
+
 
 ## 🔧 Установка
 
@@ -86,6 +87,7 @@ python planets.py
 ```
 
 🛠️ Требования
+
 Python 3.6+
 
 Библиотека Pillow (PIL)
