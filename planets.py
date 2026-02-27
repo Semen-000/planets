@@ -65,6 +65,11 @@ class MegaSolarSystem:
         self.show_stats = True
         self.show_minimap = True
         self.show_legend = True
+        self.auto_rotate = False
+        self.smooth_zoom = True
+        self.zoom_speed = 0.1
+        self.target_zoom = 1.0
+        self.follow_selected = False  # Следовать за выбранной планетой
         
         # Системные параметры
         self.time_of_day = 0
@@ -119,7 +124,7 @@ class MegaSolarSystem:
                 "discovery": "Древние цивилизации",
                 "description": "Самая близкая к Солнцу планета",
                 "fun_fact": "Сутки на Меркурии длятся 176 земных дней!",
-                "image_path": "images/mercury.png",
+                "image_path": "photo_5260428536751788520_x (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.1,
                 "volume": "6.08×10¹⁰ км³",
                 "escape_velocity": "4.3 км/с"
@@ -154,7 +159,7 @@ class MegaSolarSystem:
                 "discovery": "Древние цивилизации",
                 "description": "Самая горячая планета",
                 "fun_fact": "Венера вращается в обратную сторону!",
-                "image_path": "images/venus.png",
+                "image_path": "photo_5260428536751788522_x (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.2,
                 "volume": "9.28×10¹¹ км³",
                 "escape_velocity": "10.4 км/с"
@@ -191,7 +196,7 @@ class MegaSolarSystem:
                 "discovery": "Наш дом",
                 "description": "Единственная известная планета с жизнью",
                 "fun_fact": "Земля - единственная планета не названная в честь бога",
-                "image_path": "images/earth.png",
+                "image_path": "photo_5260428536751788523_y-no-bg-preview (carve.photos).png",
                 "emissivity": 0.1,
                 "volume": "1.08×10¹² км³",
                 "escape_velocity": "11.2 км/с"
@@ -229,7 +234,7 @@ class MegaSolarSystem:
                 "discovery": "Древние цивилизации",
                 "description": "Красная планета",
                 "fun_fact": "На Марсе находится самый высокий вулкан - Олимп (21 км)",
-                "image_path": "images/mars.png",
+                "image_path": "photo_5260428536751788525_y (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.15,
                 "volume": "1.63×10¹¹ км³",
                 "escape_velocity": "5.0 км/с"
@@ -269,7 +274,7 @@ class MegaSolarSystem:
                 "discovery": "Древние цивилизации",
                 "description": "Самая большая планета",
                 "fun_fact": "Большое Красное Пятно - шторм, бушующий 400 лет!",
-                "image_path": "images/jupiter.png",
+                "image_path": "photo_5260428536751788526_y (2)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.3,
                 "volume": "1.43×10¹⁵ км³",
                 "escape_velocity": "59.5 км/с"
@@ -311,7 +316,7 @@ class MegaSolarSystem:
                 "discovery": "Древние цивилизации",
                 "description": "Планета с кольцами",
                 "fun_fact": "Сатурн настолько лёгкий, что плавал бы в воде!",
-                "image_path": "images/saturn.png",
+                "image_path": "photo_5260428536751788527_y (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.25,
                 "volume": "8.27×10¹⁴ км³",
                 "escape_velocity": "35.5 км/с"
@@ -350,7 +355,7 @@ class MegaSolarSystem:
                 "discovery": "1781, Уильям Гершель",
                 "description": "Ледяной гигант",
                 "fun_fact": "Уран вращается на боку, ось наклонена на 98°",
-                "image_path": "images/uranus.png",
+                "image_path": "photo_5260428536751788528_x (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.2,
                 "volume": "6.83×10¹³ км³",
                 "escape_velocity": "21.3 км/с"
@@ -388,7 +393,7 @@ class MegaSolarSystem:
                 "discovery": "1846, Галле и д'Арре",
                 "description": "Самая ветреная планета",
                 "fun_fact": "Ветры на Нептуне достигают 2100 км/ч!",
-                "image_path": "images/neptune.png",
+                "image_path": "photo_5260428536751788529_x (1)-no-bg-preview (carve.photos).png",
                 "emissivity": 0.2,
                 "volume": "6.25×10¹³ км³",
                 "escape_velocity": "23.5 км/с"
@@ -471,6 +476,7 @@ class MegaSolarSystem:
         self.textures = {}
         self.effects_cache = {}
         self.background_images = []
+        self.info_photos = []  # Для хранения фото в описании
         
         # Создание папок
         os.makedirs("images", exist_ok=True)
@@ -478,6 +484,9 @@ class MegaSolarSystem:
         os.makedirs("saves", exist_ok=True)
         os.makedirs("screenshots", exist_ok=True)
         os.makedirs("backgrounds", exist_ok=True)
+        
+        # Загружаем изображение Солнца из предоставленного файла
+        self.load_sun_image()
         
         self.load_planet_images()
         self.generate_textures()
@@ -494,6 +503,49 @@ class MegaSolarSystem:
         
         # ==================== ЗАПУСК ФОНОВЫХ ЗАДАЧ ====================
         self.start_background_tasks()
+    
+    def load_sun_image(self):
+        """Загрузка изображения Солнца из предоставленного файла"""
+        if not HAS_PIL:
+            print("⚠️ PIL не установлен, не могу загрузить изображение Солнца")
+            return
+        
+        # Сохраняем предоставленное изображение
+        sun_image_path = "photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png"
+        
+        # Проверяем, есть ли файл с изображением
+        if os.path.exists("photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png"):
+            try:
+                # Загружаем изображение
+                img = Image.open("photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png")
+                
+                # Конвертируем в RGBA
+                if img.mode != 'RGBA':
+                    img = img.convert('RGBA')
+                
+                # Улучшаем изображение
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(1.2)
+                
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(1.1)
+                
+                # Сохраняем оригинальное изображение
+                self.sun_image_original = img
+                
+                # Создаем кэш для разных размеров
+                self.sun_images_cache = {}
+                
+                print("✅ Загружено пользовательское изображение Солнца")
+                
+            except Exception as e:
+                print(f"❌ Ошибка загрузки изображения Солнца: {e}")
+                self.sun_image_original = None
+                self.sun_images_cache = {}
+        else:
+            print("⚠️ Файл с изображением Солнца не найден")
+            self.sun_image_original = None
+            self.sun_images_cache = {}
     
     def generate_satellites(self):
         """Генерация искусственных спутников Земли"""
@@ -928,6 +980,8 @@ class MegaSolarSystem:
         self.canvas.bind("<Double-Button-1>", self.on_double_click)
         self.canvas.bind("<Control-MouseWheel>", self.on_control_mousewheel)
         self.canvas.bind("<Shift-MouseWheel>", self.on_shift_mousewheel)
+        self.canvas.bind("<Button-4>", self.on_mousewheel_linux_up)  # Для Linux
+        self.canvas.bind("<Button-5>", self.on_mousewheel_linux_down)  # Для Linux
         
         # Панель управления с улучшенным дизайном
         self.control_panel = tk.Frame(canvas_frame, bg='#0a0a2a', height=200, relief=tk.RAISED, bd=3)
@@ -1000,6 +1054,11 @@ class MegaSolarSystem:
                  bg='#4a6a9a', fg='white', font=('Arial', 10, 'bold'),
                  width=3).pack(side=tk.LEFT, padx=2)
         
+        # НОВАЯ КНОПКА: Автоматический зум для всех планет
+        tk.Button(zoom_buttons, text="🌍 ВСЕ", command=self.zoom_to_all_planets,
+                 bg='#4a6a9a', fg='white', font=('Arial', 10, 'bold'),
+                 width=3).pack(side=tk.LEFT, padx=2)
+        
         # Кнопки управления
         buttons_frame = tk.Frame(control_tab, bg='#0a0a2a')
         buttons_frame.pack(fill=tk.X, pady=10, padx=10)
@@ -1018,6 +1077,12 @@ class MegaSolarSystem:
                               bg='#4a6a9a', fg='white', font=('Arial', 11, 'bold'),
                               width=12, relief=tk.RAISED, bd=3)
         center_btn.pack(side=tk.LEFT, padx=5)
+        
+        # НОВАЯ КНОПКА: Следовать за планетой
+        self.follow_btn = tk.Button(buttons_frame, text="👁️ СЛЕДИТЬ", command=self.toggle_follow,
+                                   bg='#4a6a9a', fg='white', font=('Arial', 11, 'bold'),
+                                   width=12, relief=tk.RAISED, bd=3)
+        self.follow_btn.pack(side=tk.LEFT, padx=5)
         
         # Вкладка отображения
         display_tab = tk.Frame(notebook, bg='#0a0a2a')
@@ -1154,6 +1219,187 @@ class MegaSolarSystem:
         # Легенда
         self.create_legend()
     
+    def draw_sun_mega(self, center_x, center_y):
+        """Рисует ультра-солнце с пользовательским изображением"""
+        sun_radius = 50 * self.zoom_factor
+        
+        # Используем пользовательское изображение если доступно
+        if HAS_PIL and hasattr(self, 'sun_image_original') and self.sun_image_original is not None:
+            try:
+                # Получаем или создаем изображение нужного размера
+                target_size = int(sun_radius * 2)
+                if target_size > 10:
+                    # Проверяем кэш
+                    cache_key = f"sun_{target_size}"
+                    if cache_key in self.sun_images_cache:
+                        img_resized = self.sun_images_cache[cache_key]
+                    else:
+                        # Масштабируем с сохранением пропорций
+                        img = self.sun_image_original
+                        
+                        # Получаем оригинальные размеры
+                        orig_width, orig_height = img.size
+                        
+                        # Вычисляем новый размер с сохранением пропорций
+                        if orig_width > orig_height:
+                            new_width = target_size
+                            new_height = int(orig_height * (target_size / orig_width))
+                        else:
+                            new_height = target_size
+                            new_width = int(orig_width * (target_size / orig_height))
+                        
+                        # Ресайзим изображение
+                        img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                        
+                        # Создаем квадратное полотно с прозрачным фоном
+                        square_img = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+                        
+                        # Вставляем изображение в центр
+                        x_offset = (target_size - new_width) // 2
+                        y_offset = (target_size - new_height) // 2
+                        square_img.paste(img_resized, (x_offset, y_offset), img_resized)
+                        
+                        # Добавляем свечение
+                        glow = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+                        draw = ImageDraw.Draw(glow)
+                        for i in range(5):
+                            r = target_size//2 + i*3
+                            alpha = 100 - i*20
+                            draw.ellipse([target_size//2 - r, target_size//2 - r, 
+                                         target_size//2 + r, target_size//2 + r], 
+                                        outline=(255, 200, 0, alpha), width=2)
+                        
+                        # Накладываем свечение
+                        img_resized = Image.alpha_composite(square_img, glow)
+                        
+                        self.sun_images_cache[cache_key] = img_resized
+                    
+                    # Конвертируем в PhotoImage
+                    self.sun_photo = ImageTk.PhotoImage(img_resized)
+                    self.canvas.create_image(center_x, center_y, image=self.sun_photo, anchor='center')
+                    
+                    # Добавляем эффекты поверх изображения
+                    if self.show_effects:
+                        # Корона
+                        for i in range(36):
+                            angle = i * 10 * math.pi/180 + self.time_of_day
+                            for j in range(3):
+                                r_mult = 1.3 + j * 0.2
+                                width = 3 - j
+                                x1 = center_x + sun_radius * r_mult * math.cos(angle)
+                                y1 = center_y + sun_radius * r_mult * math.sin(angle)
+                                x2 = center_x + sun_radius * (r_mult + 0.5) * math.cos(angle + 0.1)
+                                y2 = center_y + sun_radius * (r_mult + 0.5) * math.sin(angle + 0.1)
+                                
+                                color = ['#FFD700', '#FFA500', '#FF8C00'][j]
+                                self.canvas.create_line(x1, y1, x2, y2, fill=color, width=width, smooth=True)
+                        
+                        # Вспышки
+                        for _ in range(3):
+                            angle = random.uniform(0, 2*math.pi)
+                            dist = sun_radius * random.uniform(1.5, 2.5)
+                            x = center_x + dist * math.cos(angle)
+                            y = center_y + dist * math.sin(angle)
+                            
+                            self.canvas.create_line(center_x, center_y, x, y,
+                                                   fill='#FFFF00', width=random.randint(2, 4),
+                                                   dash=(2, 4))
+                    
+                    return sun_radius
+                    
+            except Exception as e:
+                print(f"Ошибка при рисовании Солнца: {e}")
+                # Если ошибка, используем стандартное рисование
+                pass
+        
+        # Стандартное рисование Солнца (если нет изображения)
+        # Внутреннее ядро с улучшенным градиентом
+        for i in range(15):
+            r = sun_radius * (1 - i * 0.03)
+            intensity = 255 - i * 12
+            color = f'#{intensity:02x}{intensity-30:02x}00'
+            self.canvas.create_oval(center_x - r, center_y - r,
+                                    center_x + r, center_y + r,
+                                    fill=color, outline='')
+        
+        # Корона с улучшенной анимацией
+        if self.show_effects:
+            for i in range(72):
+                angle = i * 5 * math.pi/180 + self.time_of_day
+                for j in range(4):
+                    r_mult = 1.3 + j * 0.15
+                    width = 4 - j
+                    x1 = center_x + sun_radius * r_mult * math.cos(angle)
+                    y1 = center_y + sun_radius * r_mult * math.sin(angle)
+                    x2 = center_x + sun_radius * (r_mult + 0.4) * math.cos(angle + 0.15)
+                    y2 = center_y + sun_radius * (r_mult + 0.4) * math.sin(angle + 0.15)
+                    
+                    color = ['#FFD700', '#FFA500', '#FF8C00', '#FF4500'][j]
+                    self.canvas.create_line(x1, y1, x2, y2, fill=color, width=width, smooth=True)
+            
+            # Вспышки
+            for _ in range(5):
+                angle = random.uniform(0, 2*math.pi)
+                dist = sun_radius * random.uniform(1.5, 3.0)
+                x = center_x + dist * math.cos(angle)
+                y = center_y + dist * math.sin(angle)
+                
+                self.canvas.create_line(center_x, center_y, x, y,
+                                       fill='#FFFF00', width=random.randint(2, 6),
+                                       dash=(2, 4))
+        
+        # Солнечные пятна
+        for _ in range(8):
+            spot_angle = random.uniform(0, 2*math.pi)
+            spot_dist = random.uniform(0, sun_radius * 0.7)
+            spot_x = center_x + spot_dist * math.cos(spot_angle)
+            spot_y = center_y + spot_dist * math.sin(spot_angle)
+            spot_r = random.uniform(5, 20) * self.zoom_factor
+            
+            self.canvas.create_oval(spot_x - spot_r, spot_y - spot_r,
+                                    spot_x + spot_r, spot_y + spot_r,
+                                    fill='#8B4513', outline='#CD853F', stipple='gray50')
+        
+        return sun_radius
+    
+    def zoom_to_all_planets(self):
+        """Автоматический зум, чтобы были видны все планеты"""
+        # Находим максимальное расстояние до планеты
+        max_distance = max(planet["distance"] for planet in self.planets_data)
+        
+        # Добавляем запас для Плутона и колец
+        max_distance = max(max_distance, 40) * 1.2
+        
+        # Рассчитываем нужный зум
+        canvas_width = 1300
+        required_zoom = canvas_width / (max_distance * self.AU * 2)
+        
+        # Ограничиваем зум
+        self.zoom_scale.set(min(10.0, max(0.1, required_zoom)))
+        
+        # Центрируем вид
+        self.center_view()
+        
+        # Показываем сообщение
+        self.info_text.config(state=tk.NORMAL)
+        self.info_text.delete(1.0, tk.END)
+        self.info_text.insert(tk.END, "✅ Автоматический зум активирован!\n")
+        self.info_text.insert(tk.END, f"Видно все планеты до Плутона\n")
+        self.info_text.insert(tk.END, f"Масштаб: {self.zoom_factor:.2f}x")
+        self.info_text.config(state=tk.DISABLED)
+    
+    def toggle_follow(self):
+        """Включение/выключение следования за планетой"""
+        if not self.selected_planet:
+            messagebox.showinfo("Внимание", "Сначала выберите планету!")
+            return
+        
+        self.follow_selected = not self.follow_selected
+        if self.follow_selected:
+            self.follow_btn.config(text="👁️ СЛЕДИТЬ (ВКЛ)", bg='#2a9a2a')
+        else:
+            self.follow_btn.config(text="👁️ СЛЕДИТЬ", bg='#4a6a9a')
+    
     def create_legend(self):
         """Создание легенды"""
         self.legend_frame = tk.Frame(self.root, bg='#0a0a2a', relief=tk.RAISED, bd=2)
@@ -1163,7 +1409,7 @@ class MegaSolarSystem:
                 font=('Arial', 10, 'bold')).pack(fill=tk.X, pady=2)
         
         legend_items = [
-            ("🟡", "Солнце"),
+            ("🟡", "Солнце (пользовательское)"),
             ("⚪", "Планета"),
             ("⚫", "Спутник"),
             ("☄️", "Астероид"),
@@ -1225,15 +1471,37 @@ class MegaSolarSystem:
             "• Ctrl+Колесико: точная настройка зума",
             "• Shift+Колесико: горизонтальный скролл",
             "• ПКМ: контекстное меню",
-            "• Двойной клик: центрировать на планете"
+            "• Двойной клик: центрировать на планете",
+            "• + / -: быстрый зум",
+            "• Пробел: пауза",
+            "• C: центрировать вид",
+            "• R: сброс симуляции",
+            "• F: следовать за планетой",
+            "• A: автоматический зум"
         ]
         
         for control in controls:
             tk.Label(guide_frame, text=control, bg='#0a0a2a', fg='white',
                     font=('Arial', 9)).pack(anchor='w')
+        
+        # Добавляем горячие клавиши
+        self.bind_hotkeys()
+    
+    def bind_hotkeys(self):
+        """Привязка горячих клавиш"""
+        self.root.bind("<Key-space>", lambda e: self.toggle_pause())
+        self.root.bind("<Key-c>", lambda e: self.center_view())
+        self.root.bind("<Key-r>", lambda e: self.reset_simulation())
+        self.root.bind("<Key-plus>", lambda e: self.zoom_in())
+        self.root.bind("<Key-equal>", lambda e: self.zoom_in())
+        self.root.bind("<Key-minus>", lambda e: self.zoom_out())
+        self.root.bind("<Key-f>", lambda e: self.toggle_follow())
+        self.root.bind("<Key-a>", lambda e: self.zoom_to_all_planets())
+        self.root.bind("<Key-h>", lambda e: self.toggle_control_panel())
+        self.root.bind("<Escape>", lambda e: self.root.quit() if self.fullscreen else None)
     
     def show_mega_planet_info(self, planet_name):
-        """Показывает улучшенную информацию о планете"""
+        """Показывает улучшенную информацию о планете с фото"""
         planet = next((p for p in self.planets_data if p["name"] == planet_name), None)
         if not planet or planet_name not in self.planet_info:
             return
@@ -1243,22 +1511,88 @@ class MegaSolarSystem:
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         
+        # Верхняя часть с названием
         title_frame = tk.Frame(self.scrollable_frame, bg='#0a0a2a')
         title_frame.pack(fill=tk.X, pady=10, padx=10)
         
+        # Цветной кружок
         color_label = tk.Label(title_frame, text="●", bg='#0a0a2a', fg=planet["color"],
                               font=('Arial', 36))
         color_label.pack(side=tk.LEFT)
         
+        # Название планеты
         tk.Label(title_frame, text=planet_name, bg='#0a0a2a', fg='#FFD700',
                 font=('Arial', 24, 'bold')).pack(side=tk.LEFT, padx=10)
         
+        # ===== ФОТО ПЛАНЕТЫ =====
+        if HAS_PIL and planet["name"] in self.planet_images:
+            try:
+                # Создаем фрейм для фото
+                photo_frame = tk.Frame(self.scrollable_frame, bg='#1a1a3a', relief=tk.RIDGE, bd=3)
+                photo_frame.pack(pady=10, padx=10, fill=tk.X)
+                
+                # Заголовок
+                tk.Label(photo_frame, text="🖼️ ФОТО ПЛАНЕТЫ", 
+                        bg='#1a1a3a', fg='#FFD700', font=('Arial', 12, 'bold')).pack(pady=5)
+                
+                # Получаем изображение
+                img = self.planet_images[planet["name"]]
+                
+                # Задаем размер для отображения (200x200)
+                target_size = 200
+                
+                # Получаем оригинальные размеры
+                orig_width, orig_height = img.size
+                
+                # Вычисляем новый размер с сохранением пропорций
+                if orig_width > orig_height:
+                    new_width = target_size
+                    new_height = int(orig_height * (target_size / orig_width))
+                else:
+                    new_height = target_size
+                    new_width = int(orig_width * (target_size / orig_height))
+                
+                # Ресайзим изображение
+                img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                # Создаем квадратное полотно с прозрачным фоном
+                square_img = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+                
+                # Вставляем изображение в центр
+                x_offset = (target_size - new_width) // 2
+                y_offset = (target_size - new_height) // 2
+                square_img.paste(img_resized, (x_offset, y_offset), img_resized)
+                
+                # Конвертируем в PhotoImage
+                photo = ImageTk.PhotoImage(square_img)
+                
+                # Сохраняем ссылку на фото
+                self.info_photos.append(photo)
+                
+                # Отображаем фото
+                tk.Label(photo_frame, image=photo, bg='#1a1a3a').pack(pady=10)
+                
+                # Добавляем информацию о размере
+                size_text = f"Оригинальный размер: {orig_width} x {orig_height}"
+                tk.Label(photo_frame, text=size_text, bg='#1a1a3a', fg='#87CEEB',
+                        font=('Arial', 8)).pack(pady=(0, 5))
+                
+            except Exception as e:
+                print(f"Ошибка при отображении фото {planet_name}: {e}")
+                # Если ошибка, показываем сообщение
+                error_frame = tk.Frame(self.scrollable_frame, bg='#1a1a3a', relief=tk.RIDGE, bd=3)
+                error_frame.pack(pady=10, padx=10, fill=tk.X)
+                tk.Label(error_frame, text="❌ Не удалось загрузить фото", 
+                        bg='#1a1a3a', fg='#FF6B6B', font=('Arial', 10)).pack(pady=10)
+        
+        # Английское название
         if info["Английское название"]:
             tk.Label(self.scrollable_frame, text=info["Английское название"],
                     bg='#0a0a2a', fg='#87CEEB', font=('Arial', 14, 'italic')).pack()
         
         self.add_mega_separator()
         
+        # Тип планеты
         tk.Label(self.scrollable_frame, text=f"📌 {info['Тип']}",
                 bg='#0a0a2a', fg='#FFA500', font=('Arial', 12, 'bold')).pack(pady=5)
         
@@ -1282,7 +1616,7 @@ class MegaSolarSystem:
         if "История" in info:
             self.add_mega_section("📜 ИСТОРИЯ", info["История"])
         
-        # Описание
+        # Описание и интересный факт
         if "Интересное" in info:
             desc_frame = tk.Frame(self.scrollable_frame, bg='#1a1a3a', relief=tk.RIDGE, bd=2)
             desc_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -1422,6 +1756,8 @@ class MegaSolarSystem:
         self.pan_x = 0
         self.pan_y = 0
         self.selected_planet = None
+        self.follow_selected = False
+        self.follow_btn.config(text="👁️ СЛЕДИТЬ", bg='#4a6a9a')
         self.show_mega_welcome()
         
         self.info_text.config(state=tk.NORMAL)
@@ -1518,11 +1854,19 @@ class MegaSolarSystem:
             messagebox.showerror("Ошибка", f"Не удалось экспортировать: {e}")
     
     def on_mousewheel(self, event):
-        """Обработка колесика мыши для зума"""
+        """Обработка колесика мыши для зума (Windows)"""
         if event.delta > 0:
             self.zoom_scale.set(min(10.0, self.zoom_factor + 0.1))
         else:
             self.zoom_scale.set(max(0.1, self.zoom_factor - 0.1))
+    
+    def on_mousewheel_linux_up(self, event):
+        """Обработка колесика вверх для Linux"""
+        self.zoom_scale.set(min(10.0, self.zoom_factor + 0.1))
+    
+    def on_mousewheel_linux_down(self, event):
+        """Обработка колесика вниз для Linux"""
+        self.zoom_scale.set(max(0.1, self.zoom_factor - 0.1))
     
     def on_control_mousewheel(self, event):
         """Точная настройка зума с Ctrl"""
@@ -1582,6 +1926,7 @@ class MegaSolarSystem:
         menu.add_command(label="🔍 Сбросить зум", command=self.zoom_reset)
         menu.add_command(label="🔍 Увеличить", command=self.zoom_in)
         menu.add_command(label="🔍 Уменьшить", command=self.zoom_out)
+        menu.add_command(label="🌍 Показать все планеты", command=self.zoom_to_all_planets)
         menu.add_separator()
         menu.add_command(label="⏸️ Пауза", command=self.toggle_pause)
         menu.add_command(label="🔄 Сброс", command=self.reset_simulation)
@@ -1607,6 +1952,8 @@ class MegaSolarSystem:
             if math.sqrt((event.x - x)**2 + (event.y - y)**2) < radius + 10:
                 self.pan_x = 650 - x
                 self.pan_y = 400 - y
+                self.selected_planet = planet["name"]
+                self.show_mega_planet_info(planet["name"])
                 break
     
     def on_canvas_click(self, event):
@@ -1668,59 +2015,17 @@ class MegaSolarSystem:
             
             if minimap_x <= x <= minimap_x + minimap_size and minimap_y <= y <= minimap_y + minimap_size:
                 self.canvas.create_oval(x - 2, y - 2, x + 2, y + 2, fill=planet["color"], outline='')
-    
-    def draw_sun_mega(self, center_x, center_y):
-        """Рисует ультра-солнце"""
-        sun_radius = 50 * self.zoom_factor
         
-        # Внутреннее ядро с улучшенным градиентом
-        for i in range(15):
-            r = sun_radius * (1 - i * 0.03)
-            intensity = 255 - i * 12
-            color = f'#{intensity:02x}{intensity-30:02x}00'
-            self.canvas.create_oval(center_x - r, center_y - r,
-                                    center_x + r, center_y + r,
-                                    fill=color, outline='')
+        # Область просмотра на миникарте
+        view_width = 1300 / (self.AU * self.zoom_factor) * 10
+        view_height = 800 / (self.AU * self.zoom_factor) * 10
         
-        # Корона с улучшенной анимацией
-        if self.show_effects:
-            for i in range(72):
-                angle = i * 5 * math.pi/180 + self.time_of_day
-                for j in range(4):
-                    r_mult = 1.3 + j * 0.15
-                    width = 4 - j
-                    x1 = center_x + sun_radius * r_mult * math.cos(angle)
-                    y1 = center_y + sun_radius * r_mult * math.sin(angle)
-                    x2 = center_x + sun_radius * (r_mult + 0.4) * math.cos(angle + 0.15)
-                    y2 = center_y + sun_radius * (r_mult + 0.4) * math.sin(angle + 0.15)
-                    
-                    color = ['#FFD700', '#FFA500', '#FF8C00', '#FF4500'][j]
-                    self.canvas.create_line(x1, y1, x2, y2, fill=color, width=width, smooth=True)
-            
-            # Вспышки
-            for _ in range(5):
-                angle = random.uniform(0, 2*math.pi)
-                dist = sun_radius * random.uniform(1.5, 3.0)
-                x = center_x + dist * math.cos(angle)
-                y = center_y + dist * math.sin(angle)
-                
-                self.canvas.create_line(center_x, center_y, x, y,
-                                       fill='#FFFF00', width=random.randint(2, 6),
-                                       dash=(2, 4))
+        view_x = sun_x - (self.pan_x / (self.AU * self.zoom_factor)) * 10
+        view_y = sun_y - (self.pan_y / (self.AU * self.zoom_factor)) * 10
         
-        # Солнечные пятна
-        for _ in range(8):
-            spot_angle = random.uniform(0, 2*math.pi)
-            spot_dist = random.uniform(0, sun_radius * 0.7)
-            spot_x = center_x + spot_dist * math.cos(spot_angle)
-            spot_y = center_y + spot_dist * math.sin(spot_angle)
-            spot_r = random.uniform(5, 20) * self.zoom_factor
-            
-            self.canvas.create_oval(spot_x - spot_r, spot_y - spot_r,
-                                    spot_x + spot_r, spot_y + spot_r,
-                                    fill='#8B4513', outline='#CD853F', stipple='gray50')
-        
-        return sun_radius
+        self.canvas.create_rectangle(view_x - view_width/2, view_y - view_height/2,
+                                     view_x + view_width/2, view_y + view_height/2,
+                                     outline='#FFD700', width=2, dash=(2, 2))
     
     def draw_planet_mega(self, center_x, center_y, planet):
         """Рисует ультра-планету"""
@@ -1731,6 +2036,11 @@ class MegaSolarSystem:
         
         if not self.paused:
             planet["rotation"] += planet["rotation_speed"] * self.time_multiplier
+        
+        # Следование за планетой
+        if self.follow_selected and self.selected_planet == planet["name"]:
+            self.pan_x = 650 - x
+            self.pan_y = 400 - y
         
         # Траектории
         if self.trails_enabled:
@@ -1751,14 +2061,37 @@ class MegaSolarSystem:
         if HAS_PIL and planet["name"] in self.planet_images:
             try:
                 img = self.planet_images[planet["name"]]
-                img_size = int(radius * 2)
-                if img_size > 10:
-                    img_resized = img.resize((img_size, img_size), Image.Resampling.LANCZOS)
+                
+                # Задаем размер для отображения
+                target_size = int(radius * 2)
+                if target_size > 10:
+                    # Получаем оригинальные размеры
+                    orig_width, orig_height = img.size
                     
+                    # Вычисляем новый размер с сохранением пропорций
+                    if orig_width > orig_height:
+                        new_width = target_size
+                        new_height = int(orig_height * (target_size / orig_width))
+                    else:
+                        new_height = target_size
+                        new_width = int(orig_width * (target_size / orig_height))
+                    
+                    # Ресайзим изображение
+                    img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    # Создаем квадратное полотно с прозрачным фоном
+                    square_img = Image.new('RGBA', (target_size, target_size), (0, 0, 0, 0))
+                    
+                    # Вставляем изображение в центр
+                    x_offset = (target_size - new_width) // 2
+                    y_offset = (target_size - new_height) // 2
+                    square_img.paste(img_resized, (x_offset, y_offset), img_resized)
+                    
+                    # Поворачиваем если нужно
                     if abs(planet["rotation"]) > 0.01:
-                        img_resized = img_resized.rotate(planet["rotation"] * 180/math.pi, expand=1)
+                        square_img = square_img.rotate(planet["rotation"] * 180/math.pi, expand=0)
                     
-                    self.photo = ImageTk.PhotoImage(img_resized)
+                    self.photo = ImageTk.PhotoImage(square_img)
                     self.canvas.create_image(x, y, image=self.photo, anchor='center')
                     
                     if not hasattr(planet, 'photo_ref'):
@@ -1766,7 +2099,8 @@ class MegaSolarSystem:
                     else:
                         planet['photo_ref'] = self.photo
                     
-            except:
+            except Exception as e:
+                print(f"Ошибка при отображении планеты {planet['name']}: {e}")
                 self.draw_planet_gradient(x, y, radius, planet)
         else:
             self.draw_planet_gradient(x, y, radius, planet)
