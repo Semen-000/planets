@@ -55,12 +55,12 @@
 git clone https://github.com/Semen-000/planets.git
 cd planets
 ```
-**Установите зависимости:**
+2. **Установите зависимости:**
 
 ```bash
 pip install Pillow
 ```
-**Добавьте изображения планет в корневую папку:**
+3. **Добавьте изображения планет в корневую папку:**
 
 ```photo_5260428536751788519_y (1)-no-bg-preview (carve.photos).png``` - Солнце
 
@@ -80,7 +80,7 @@ pip install Pillow
 
 ```photo_5260428536751788529_x (1)-no-bg-preview (carve.photos).png``` - Нептун
 
-**Запустите программу:**
+4. **Запустите программу:**
 
 ```bash
 python planets.py
